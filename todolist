@@ -1,0 +1,27 @@
+- Put a maximum limit on # of clients as the architecture is new thread per clients
+- Create redis::objects, should encapsulate away RESP serialization logic so that it doesn't have to be
+  repeated in every redis cmd
+    - Update redis_##NAME to return unique_ptr<RObject> (You will have to use move in redis_##NAME)
+    - Use serialize() once you get the output
+- BenchMark RESPParser. Evaluate if moving away from std::string is worth it.
+    - not worth it for now, slowness was due to print statements
+    - benchmark meeting actual redis
+- Implement redis-cmds:
+    - SET
+    - GET
+    - EXISTS
+    - DEL
+    - INCR
+    - DECR
+    - LPUSH
+    - RPUSH
+    - SAVE
+- Implement unit tests for all redis cmds
+
+
+SimpleString("Parv").serialize() ---> "+Parv\r\n"
+Error("Not Found").serialize()   ---> "-Note Found\r\n"
+Integer(123).serialize()         ---> ":1\r\n"
+BulkString("Yay").serialize()    ---> "$3\r\nYay\r\n"
+Array({obj1, obj2, ...}).serialize()> "*<count>\r\n<obj1.serialize()><obj2.serialize>...."
+
