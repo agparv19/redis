@@ -6,6 +6,13 @@ std::unordered_map<std::string, redis_func_type> cmd_map = {
     {"echo", redis_echo},
     {"set",  redis_set},
     {"get",  redis_get},
+    {"exists", redis_exists},
+    {"del",    redis_del},
+    {"incr",   redis_incr},
+    {"decr",   redis_decr},
+    {"lpush",  redis_lpush},
+    {"rpush",  redis_rpush},
+    {"lrange", redis_lrange},
     {"config",  redis_config},};
 
 
@@ -151,6 +158,170 @@ cmd_ret_type redis_get(const std::vector<std::string>& req) {
     }
     return std::make_unique<redis::SimpleString>(output);
 }
+
+cmd_ret_type redis_exists(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "exists") {
+        throw RedisServerError("Bad input");
+    }
+
+    int count = 0;
+    int i = 1;
+
+    if (req.size() < 2) {
+        return std::make_unique<redis::Error>("ERR syntax error");
+    }
+    
+    while(i < req.size()) {
+        if (RedisStore::getInstance().exists(req[i])) {
+            count++;
+        }
+        i++;
+    }
+    return std::make_unique<redis::Integer>(count);
+}
+
+
+cmd_ret_type redis_del(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "del") {
+        throw RedisServerError("Bad input");
+    }
+
+    int count = 0;
+    int i = 1;
+
+    if (req.size() < 2) {
+        return std::make_unique<redis::Error>("ERR syntax error");
+    }
+
+    while(i < req.size()) {
+        count += RedisStore::getInstance().erase(req[i]);
+        i++;
+    }
+    return std::make_unique<redis::Integer>(count);
+
+}
+
+cmd_ret_type redis_incr(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "incr") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() != 2) {
+        return std::make_unique<redis::Error>("ERR syntax error");
+    }
+
+    try{
+        int64_t res = RedisStore::getInstance().incr(req[1]);
+        return std::make_unique<redis::Integer>(res);
+    } catch (const std::exception& e) {
+        goto out_of_range;
+    }
+
+    out_of_range:
+    return std::make_unique<redis::Error>("ERR value is not an integer or out of range");
+}
+
+cmd_ret_type redis_decr(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "decr") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() != 2) {
+        return std::make_unique<redis::Error>("ERR syntax error");
+    }
+
+    try{
+        int64_t res = RedisStore::getInstance().incr(req[1], true);
+        return std::make_unique<redis::Integer>(res);
+    } catch (const std::exception& e) {
+        goto out_of_range;
+    }
+
+    out_of_range:
+    return std::make_unique<redis::Error>("ERR value is not an integer or out of range");
+}
+
+cmd_ret_type redis_lpush(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "lpush") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() < 3) {
+        return std::make_unique<redis::Error>
+        ("ERR wrong number of arguments for 'lpush' command");
+    }
+
+    int i = 2;
+    std::vector<std::string> vals;
+    while (i < req.size()) {
+        vals.push_back(req[i]);
+        i++;
+    }
+    int res = RedisStore::getInstance().lpush(req[1], vals);
+    return std::make_unique<redis::Integer>(res);
+}
+
+cmd_ret_type redis_rpush(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "rpush") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() < 3) {
+        return std::make_unique<redis::Error>
+        ("ERR wrong number of arguments for 'rpush' command");
+    }
+
+    int i = 2;
+    std::vector<std::string> vals;
+    while (i < req.size()) {
+        vals.push_back(req[i]);
+        i++;
+    }
+    int res = RedisStore::getInstance().lpush(req[1], vals, true);
+    return std::make_unique<redis::Integer>(res);
+}
+
+cmd_ret_type redis_lrange(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "lrange") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() != 4) {
+        return std::make_unique<redis::Error>
+        ("ERR wrong number of arguments for 'lrange' command");
+    }
+
+    int64_t start;
+    int64_t end;
+    std::vector<std::string> res;
+    std::unique_ptr<redis::Array> arr = std::make_unique<redis::Array>();
+    try{
+        start = std::stoll(req[2]);
+        end = std::stoll(req[3]);
+    } catch (const std::exception& e) {
+        goto out_of_range;
+    }
+
+    res = RedisStore::getInstance().lrange(req[1], start, end);
+
+    for (auto str : res) {
+        arr->add_element(std::make_unique<redis::BulkString>(str));
+    }
+
+    return std::move(arr);
+
+    out_of_range:
+    return std::make_unique<redis::Error>("ERR value is not an integer or out of range");
+
+}
+
 
 cmd_ret_type redis_config_get(const std::vector<std::string>& req) {
 

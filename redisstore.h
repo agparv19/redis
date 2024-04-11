@@ -1,5 +1,6 @@
 #include "common.h"
 #include <shared_mutex>
+#include <deque>
 
 struct ValueEntry {
     std::string val;
@@ -9,6 +10,7 @@ struct ValueEntry {
 class RedisStore {
 
     typedef std::unordered_map<std::string, ValueEntry> data_type; 
+    typedef std::unordered_map<std::string, std::deque<std::string>> list_type;
 
     public:
 
@@ -16,9 +18,12 @@ class RedisStore {
     static void delInstance();
 
     void set(const std::string& key, const std::string& value, const std::time_t expiry_epoch = LONG_MAX);
-    void set_with_expiry_epoch(const std::string& key, const std::string& value, const std::time_t expiry_epoch);
-    void set_with_expiry_from_now(const std::string& key, const std::string& value, const std::time_t expiry_from_now_in_sec);
     bool get(const std::string& key, std::string& value) const;
+    bool exists(const std::string& key) const;
+    int erase(const std::string& key);
+    int incr(const std::string& key, bool reverse = false);
+    int lpush(const std::string& key, const std::vector<std::string>& vals, bool reverse = false);
+    std::vector<std::string> lrange(const std::string& key, int start, int end);
     void clear();
 
     RedisStore(const RedisStore&) = delete;
@@ -27,6 +32,7 @@ class RedisStore {
     private:
 
     static data_type data;
+    static list_type list_data;
 
     RedisStore() {}
     ~RedisStore() {}
@@ -34,6 +40,7 @@ class RedisStore {
     static RedisStore* _Instance;
     static std::mutex _Instancemutex;
     mutable std::shared_mutex _datamutex; 
+    mutable std::shared_mutex _listmutex; 
         
 
 };

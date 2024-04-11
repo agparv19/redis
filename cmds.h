@@ -13,6 +13,13 @@ REDIS_CMD(ping)
 REDIS_CMD(echo)
 REDIS_CMD(set)
 REDIS_CMD(get)
+REDIS_CMD(exists)
+REDIS_CMD(del)
+REDIS_CMD(incr)
+REDIS_CMD(decr)
+REDIS_CMD(lpush)
+REDIS_CMD(rpush)
+REDIS_CMD(lrange)
 REDIS_CMD(config)
 
 

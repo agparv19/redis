@@ -4,6 +4,7 @@
 RedisStore* RedisStore::_Instance = nullptr;
 std::mutex RedisStore::_Instancemutex;
 RedisStore::data_type RedisStore::data;
+RedisStore::list_type RedisStore::list_data;
 
 RedisStore& RedisStore::getInstance() {
 
@@ -39,17 +40,9 @@ void RedisStore::set(const std::string& key, const std::string& value, const std
     data[key] = {value, expiry_epoch}; // never expires
 }
 
-void RedisStore::set_with_expiry_epoch(const std::string& key, const std::string& value, const std::time_t expiry_epoch) {
-    std::unique_lock<std::shared_mutex> lock(_datamutex);
-    data[key] = {value, expiry_epoch};
-}
-
-void RedisStore::set_with_expiry_from_now(const std::string& key, const std::string& value, const std::time_t expiry_from_now_in_sec) {
-    std::unique_lock<std::shared_mutex> lock(_datamutex);
+static std::time_t now_epoch() {
     auto now = std::chrono::system_clock::now();
-    auto expiry = now + std::chrono::seconds(expiry_from_now_in_sec);
-    std::time_t expiry_epoch = std::chrono::system_clock::to_time_t(expiry);
-    data[key] = {value, expiry_epoch};
+    return std::chrono::system_clock::to_time_t(now);
 }
 
 bool RedisStore::get(const std::string& key, std::string& value) const {
@@ -59,10 +52,8 @@ bool RedisStore::get(const std::string& key, std::string& value) const {
         std::shared_lock<std::shared_mutex> lock(_datamutex);
         auto it = data.find(key);
         if (it != data.end()) {
-            auto now = std::chrono::system_clock::now();
-            std::time_t now_epoch = std::chrono::system_clock::to_time_t(now);
 
-            if (it->second.expiry_epoch > now_epoch) {
+            if (it->second.expiry_epoch > now_epoch()) {
                 value = it->second.val;
                 return true;
             } else {
@@ -79,4 +70,100 @@ bool RedisStore::get(const std::string& key, std::string& value) const {
         data.erase(key);
     }
     return false;
+}
+
+bool RedisStore::exists(const std::string& key) const {
+
+    static std::string temp;
+    return get(key, temp);
+}
+
+int RedisStore::erase(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(_datamutex);
+    return data.erase(key);
+}
+
+/**
+ * reverse set to true means decr
+*/
+int RedisStore::incr(const std::string& key, bool reverse) {
+    std::unique_lock<std::shared_mutex> lock(_datamutex);
+    std::string str_val;
+    auto it = data.find(key);
+    if (it != data.end() && it->second.expiry_epoch > now_epoch()) {
+        int64_t int_val;
+        try{
+            int_val = std::stoll(it->second.val);
+        } catch (const std::exception& e) {
+            throw e;
+        }
+        int delta = reverse ? -1 : 1;
+        str_val = std::to_string(int_val+delta);
+        it->second.val = str_val;
+        return int_val+delta;
+    } else {
+        data[key] = {reverse ? "-1" : "1", LONG_MAX};
+        return reverse ? -1 : 1;
+    }
+
+    // should not reach here
+    return -1;
+}
+
+int RedisStore::lpush(const std::string& key, const std::vector<std::string>& vals, bool reverse) {
+
+    std::unique_lock<std::shared_mutex> lock(_listmutex);
+
+    auto it = list_data.find(key);
+    if (it == list_data.end()) {
+        // maybe this is not required
+        list_data[key] = {};
+    }
+
+    for (auto val : vals) {
+        if (reverse) {
+            list_data[key].push_back(val);
+        } else {
+            list_data[key].push_front(val);
+        }
+    }
+
+    return list_data[key].size();
+
+}
+
+std::vector<std::string> RedisStore::lrange(const std::string& key, int start, int end) {
+    std::shared_lock<std::shared_mutex> lock(_listmutex);
+    auto it = list_data.find(key);
+    if (it == list_data.end()) {
+        return {};
+    }
+
+    if (start < 0) {
+        start = it->second.size() + start;
+        if (start < 0) {
+            // I think this should return empty list
+            // unless we are wrapping around
+            return {};
+        }
+    }
+    if (end < 0) {
+        end = it->second.size() + end;
+        if (end < 0) {
+            // I think this should return empty list
+            // unless we are wrapping around
+            return {};
+        }
+    }
+    if (end >= it->second.size()) {
+        end = it->second.size()-1;
+    }
+    if (start > end) {
+        return {};
+    }
+    std::vector<std::string> res;
+    for (int i=start; i<=end && i < it->second.size(); i++) {
+        res.push_back(it->second[i]);
+    }
+    return res;
 }
