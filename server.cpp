@@ -1,9 +1,20 @@
+#include <thread>
+
 #include "common.h"
 #include "RESPParser.h"
 #include "cmds.h"
 #include "redisstore.h"
 
 class RObject;
+
+#define SANPSHOT_PERIOD 1 // minutes
+
+void periodic_snapshot() {
+    while (true) {
+        redis_save({"save"});
+        std::this_thread::sleep_for(std::chrono::minutes(SANPSHOT_PERIOD));
+    }
+}
 
 void process_request(const std::vector<std::string>& req, int client_fd) {
 
@@ -108,11 +119,18 @@ void handle_clients(int server_fd) {
 
 int main() {
 
+    if (!RedisStore::getInstance().restore()) {
+        std::cout << "State restoral failed! Exiting..." << std::endl;
+    }
+
+    std::thread snapshot_thread(periodic_snapshot);
+
     int server_fd = setup_server();    
     handle_clients(server_fd);
     if (close(server_fd)) {
         die("close");
     }
 
+    snapshot_thread.join();
     RedisStore::delInstance();
 }

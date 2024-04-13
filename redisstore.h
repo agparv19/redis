@@ -1,6 +1,9 @@
 #include "common.h"
 #include <shared_mutex>
 #include <deque>
+#include <nlohmann/json.hpp>
+
+#define STATEFILE "/home/agparv19/codemill/redis/state.json"
 
 struct ValueEntry {
     std::string val;
@@ -24,6 +27,8 @@ class RedisStore {
     int incr(const std::string& key, bool reverse = false);
     int lpush(const std::string& key, const std::vector<std::string>& vals, bool reverse = false);
     std::vector<std::string> lrange(const std::string& key, int start, int end);
+    bool dump();
+    bool restore();
     void clear();
 
     RedisStore(const RedisStore&) = delete;

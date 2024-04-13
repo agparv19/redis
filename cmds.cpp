@@ -2,17 +2,18 @@
 #include "redisstore.h"
 
 std::unordered_map<std::string, redis_func_type> cmd_map = {
-    {"ping", redis_ping},
-    {"echo", redis_echo},
-    {"set",  redis_set},
-    {"get",  redis_get},
-    {"exists", redis_exists},
-    {"del",    redis_del},
-    {"incr",   redis_incr},
-    {"decr",   redis_decr},
-    {"lpush",  redis_lpush},
-    {"rpush",  redis_rpush},
-    {"lrange", redis_lrange},
+    {"ping",    redis_ping},
+    {"echo",    redis_echo},
+    {"set",     redis_set},
+    {"get",     redis_get},
+    {"exists",  redis_exists},
+    {"del",     redis_del},
+    {"incr",    redis_incr},
+    {"decr",    redis_decr},
+    {"lpush",   redis_lpush},
+    {"rpush",   redis_rpush},
+    {"lrange",  redis_lrange},
+    {"save",    redis_save},
     {"config",  redis_config},};
 
 
@@ -320,6 +321,24 @@ cmd_ret_type redis_lrange(const std::vector<std::string>& req) {
     out_of_range:
     return std::make_unique<redis::Error>("ERR value is not an integer or out of range");
 
+}
+
+
+cmd_ret_type redis_save(const std::vector<std::string>& req) {
+
+    if (req.size() == 0 || req[0] != "save") {
+        throw RedisServerError("Bad input");
+    }
+
+    if (req.size() > 1) {
+        return std::make_unique<redis::Error>
+        ("ERR wrong number of arguments for 'save' command");
+    }
+
+    if (RedisStore::getInstance().dump()) {
+        return std::make_unique<redis::SimpleString>("OK");
+    }
+    return std::make_unique<redis::Error>("Could not save!");
 }
 
 

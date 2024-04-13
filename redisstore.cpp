@@ -1,4 +1,4 @@
-#include <chrono>
+#include <fstream> 
 #include "redisstore.h"
 
 RedisStore* RedisStore::_Instance = nullptr;
@@ -30,9 +30,16 @@ void RedisStore::delInstance() {
 }
 
 void RedisStore::clear() {
-    std::unique_lock<std::shared_mutex> lock(_datamutex);
-    data.clear();
 
+    {
+        std::unique_lock<std::shared_mutex> lock(_datamutex);
+        data.clear();
+    }
+    {
+        std::unique_lock<std::shared_mutex> lock(_listmutex);
+        list_data.clear();
+    }
+    
 }
 
 void RedisStore::set(const std::string& key, const std::string& value, const std::time_t expiry_epoch) {
@@ -166,4 +173,65 @@ std::vector<std::string> RedisStore::lrange(const std::string& key, int start, i
         res.push_back(it->second[i]);
     }
     return res;
+}
+
+void to_json(nlohmann::json& j, const ValueEntry& v) {
+    j = nlohmann::json{{"val", v.val}, {"expiry_epoch", v.expiry_epoch}};
+}
+
+void from_json(const nlohmann::json& j, ValueEntry& v) {
+    j.at("val").get_to(v.val);
+    j.at("expiry_epoch").get_to(v.expiry_epoch);
+}
+
+bool RedisStore::dump() {
+
+    try {
+        nlohmann::json json; // will contain data to be dumped
+        {
+            // Acquire read locks
+            std::shared_lock<std::shared_mutex> lockdata(_datamutex);
+            std::shared_lock<std::shared_mutex> locklist(_listmutex);
+
+            // json library needs to_json()
+            // defined for every type involved
+
+            json["data"] = data;
+            json["list_data"] = list_data;
+        }
+        std::ofstream outputFile(STATEFILE);
+        outputFile << json.dump(4) << std::endl;
+    } catch (const std::exception& e) {
+        // something went wrong
+        // maybe log
+        return false;
+    }
+    return true;
+}
+
+bool RedisStore::restore() {
+
+    try {
+        std::ifstream inputFile(STATEFILE);
+        nlohmann::json json = nlohmann::json::parse(inputFile);
+        auto it_data = json.find("data");
+        if (it_data != json.end()) {
+            data = it_data.value();
+        } else {
+            throw RedisServerError("Could not find data map");
+        }
+
+        auto it_list_data = json.find("list_data");
+        if (it_list_data != json.end()) {
+            list_data = it_list_data.value();
+        } else {
+            throw RedisServerError("Could not find list_data map");
+        }
+
+    } catch (const std::exception& e) {
+        // something went wrong
+        // maybe log
+        return false;
+    }
+    return true;
 }

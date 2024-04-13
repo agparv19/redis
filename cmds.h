@@ -20,6 +20,7 @@ REDIS_CMD(decr)
 REDIS_CMD(lpush)
 REDIS_CMD(rpush)
 REDIS_CMD(lrange)
+REDIS_CMD(save)
 REDIS_CMD(config)
 
 
