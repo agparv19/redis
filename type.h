@@ -2,6 +2,10 @@
 
 namespace redis {
 
+    /**
+     * RObject models all the types
+     * of responses redis can give
+    */
     class RObject {
     
     public:
@@ -120,4 +124,3 @@ namespace redis {
     };
     
 }
-

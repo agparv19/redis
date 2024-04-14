@@ -74,7 +74,7 @@ cmd_ret_type redis_set(const std::vector<std::string>& req) {
     }
 
     while(i < req.size()) {
-        if (req[i] == "EX") {
+        if (to_lower(req[i]) == "ex") {
             i++;
             if (i >= req.size()) {
                 goto syntax_error;
@@ -89,7 +89,7 @@ cmd_ret_type redis_set(const std::vector<std::string>& req) {
             auto expiry = now + std::chrono::seconds(expiry_from_now);
             expiry_epoch =  std::chrono::system_clock::to_time_t(expiry);
 
-        } else if (req[i] == "PX") {
+        } else if (to_lower(req[i]) == "px") {
             i++;
             if (i >= req.size()) {
                 goto syntax_error;
@@ -104,7 +104,7 @@ cmd_ret_type redis_set(const std::vector<std::string>& req) {
             auto expiry = now + std::chrono::seconds(expiry_from_now);
             expiry_epoch =  std::chrono::system_clock::to_time_t(expiry);
 
-        } else if (req[i] == "EXAT") {
+        } else if (to_lower(req[i]) == "exat") {
             i++;
             if (i >= req.size()) {
                 goto syntax_error;
@@ -114,7 +114,7 @@ cmd_ret_type redis_set(const std::vector<std::string>& req) {
             } catch (const std::exception& e) {
                 goto out_of_range;
             }
-        } else if (req[i] == "PXAT") {
+        } else if (to_lower(req[i]) == "pxat") {
             i++;
             if (i >= req.size()) {
                 goto syntax_error;
@@ -338,7 +338,7 @@ cmd_ret_type redis_save(const std::vector<std::string>& req) {
     if (RedisStore::getInstance().dump()) {
         return std::make_unique<redis::SimpleString>("OK");
     }
-    return std::make_unique<redis::Error>("Could not save!");
+    return std::make_unique<redis::Error>("Could not save!, make sure statefile path exists!");
 }
 
 
@@ -352,11 +352,9 @@ cmd_ret_type redis_config_get(const std::vector<std::string>& req) {
 
 cmd_ret_type redis_config(const std::vector<std::string>& req) {
 
-    if (req.size() == 0 || to_lower(req[0]) != "config") {
+    if (req.size() == 0 || req[0] != "config") {
         throw RedisServerError("Bad input");
     }
 
     return redis_config_get(req);
 }
-
-

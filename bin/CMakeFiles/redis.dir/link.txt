@@ -1,0 +1,1 @@
+/usr/bin/c++  -g CMakeFiles/redis.dir/server.cpp.o CMakeFiles/redis.dir/type.cpp.o CMakeFiles/redis.dir/RESPParser.cpp.o CMakeFiles/redis.dir/redisstore.cpp.o CMakeFiles/redis.dir/common.cpp.o CMakeFiles/redis.dir/cmds.cpp.o CMakeFiles/redis.dir/config.cpp.o -o redis 

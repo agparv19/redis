@@ -85,7 +85,7 @@
         "thread": "cpp",
         "typeindex": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
-    },
-    "C_Cpp.default.cppStandard": "c++17"
+        "variant": "cpp",
+        "*.ipp": "cpp"
+    }
 }

@@ -1,4 +1,5 @@
 #include <fstream> 
+#include <filesystem>
 #include "redisstore.h"
 
 RedisStore* RedisStore::_Instance = nullptr;
@@ -82,12 +83,28 @@ bool RedisStore::get(const std::string& key, std::string& value) const {
 bool RedisStore::exists(const std::string& key) const {
 
     static std::string temp;
-    return get(key, temp);
+    bool in_data = get(key, temp);
+    bool in_list_data = false;
+    std::shared_lock<std::shared_mutex> lock(_listmutex);
+    auto it = list_data.find(key);
+    if (it != list_data.end()) {
+        in_list_data = true;
+    }
+    return in_data || in_list_data;
 }
 
 int RedisStore::erase(const std::string& key) {
-    std::unique_lock<std::shared_mutex> lock(_datamutex);
-    return data.erase(key);
+    std::unique_lock<std::shared_mutex> lockdata(_datamutex);
+    int in_data = data.erase(key);
+    if (in_data) {
+        return in_data;
+    }
+    std::unique_lock<std::shared_mutex> locklist(_listmutex);
+    int in_list_data = list_data.erase(key);
+    if (in_list_data) {
+        return in_list_data;
+    }
+    return 0;
 }
 
 /**
@@ -199,7 +216,10 @@ bool RedisStore::dump() {
             json["data"] = data;
             json["list_data"] = list_data;
         }
-        std::ofstream outputFile(STATEFILE);
+        std::filesystem::path current_path = std::filesystem::current_path();
+        std::filesystem::path state = current_path / STATEFILE;
+        // Dump into STATEFILE (state.json) in current directory
+        std::ofstream outputFile(state);
         outputFile << json.dump(4) << std::endl;
     } catch (const std::exception& e) {
         // something went wrong
@@ -212,7 +232,17 @@ bool RedisStore::dump() {
 bool RedisStore::restore() {
 
     try {
-        std::ifstream inputFile(STATEFILE);
+
+        // Acquire write locks
+        std::unique_lock<std::shared_mutex> lockdata(_datamutex);
+        std::unique_lock<std::shared_mutex> locklist(_listmutex);
+
+        std::filesystem::path current_path = std::filesystem::current_path();
+        std::filesystem::path state = current_path / STATEFILE;
+
+        // Expect STATEFILE (state.json) in current directory
+
+        std::ifstream inputFile(state);
         nlohmann::json json = nlohmann::json::parse(inputFile);
         auto it_data = json.find("data");
         if (it_data != json.end()) {
@@ -220,7 +250,6 @@ bool RedisStore::restore() {
         } else {
             throw RedisServerError("Could not find data map");
         }
-
         auto it_list_data = json.find("list_data");
         if (it_list_data != json.end()) {
             list_data = it_list_data.value();

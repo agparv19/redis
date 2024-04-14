@@ -1,18 +1,18 @@
 #include <thread>
-
 #include "common.h"
 #include "RESPParser.h"
 #include "cmds.h"
 #include "redisstore.h"
+#include "config.h"
 
 class RObject;
 
-#define SANPSHOT_PERIOD 1 // minutes
-
 void periodic_snapshot() {
+
     while (true) {
         redis_save({"save"});
-        std::this_thread::sleep_for(std::chrono::minutes(SANPSHOT_PERIOD));
+        std::this_thread::sleep_for(
+            std::chrono::minutes(redis::GlobalConfig.snapshot_period));
     }
 }
 
@@ -81,7 +81,7 @@ int setup_server() {
     // XXX Should htons be mandatory? Maybe not if both server and client
     // stay consistent. (Since your don't know endian-ness of the client
     // better to always use htons for portability)
-    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_port = htons(redis::GlobalConfig.port);
     // Bind to any available interface
     // XXX Did not understand this fully
     serverAddr.sin_addr.s_addr = INADDR_ANY;
@@ -95,7 +95,7 @@ int setup_server() {
     // TODO: Add timeout in socket for recv
     // TODO: Add timeout in socket for accept (using select or poll)
 
-    std::cout << "Server listening on port: " << PORT << std::endl;
+    std::cout << "Server listening on port: " << redis::GlobalConfig.port << std::endl;
     return server_fd;
 }
 
@@ -119,8 +119,17 @@ void handle_clients(int server_fd) {
 
 int main() {
 
+    if (!redis::read_config()) {
+        std::cout << "Unable to read config\n" 
+                  << "Please ensure config.json exist and is correctly setup"
+                  << std::endl;
+        return 0;
+    }
+
     if (!RedisStore::getInstance().restore()) {
-        std::cout << "State restoral failed! Exiting..." << std::endl;
+        std::cout << "State restoral failed! Continuing with empty state..." << std::endl;
+    } else {
+        std::cout << "Previous state restored!" << std::endl;
     }
 
     std::thread snapshot_thread(periodic_snapshot);
