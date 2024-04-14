@@ -99,6 +99,12 @@ class RedisStore {
     static data_type data;
     static list_type list_data;
 
+    /**
+     * Note: There are some rules to follow between set and lpush
+     * if the key is same between both. Duhh. I haven't implemented that.
+     * better use different keys.
+    */
+
     RedisStore() {}
     ~RedisStore() {}
 
