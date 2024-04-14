@@ -344,6 +344,9 @@ cmd_ret_type redis_save(const std::vector<std::string>& req) {
 
 cmd_ret_type redis_config_get(const std::vector<std::string>& req) {
 
+    // this is just hardcoded at the moment
+    // to make redis-benchmark usable 
+
     std::unique_ptr<redis::Array> arr = std::make_unique<redis::Array>();
     arr->add_element(std::make_unique<redis::BulkString>("900"));
     arr->add_element(std::make_unique<redis::BulkString>("1"));
@@ -355,6 +358,5 @@ cmd_ret_type redis_config(const std::vector<std::string>& req) {
     if (req.size() == 0 || req[0] != "config") {
         throw RedisServerError("Bad input");
     }
-
     return redis_config_get(req);
 }

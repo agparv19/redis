@@ -23,6 +23,9 @@ void process_request(const std::vector<std::string>& req, int client_fd) {
     }
 
     if (req[0] == "COMMAND") {
+        // apparently this is required for redis-cli
+        // during handshake, but I don't think it actually
+        // respects it. Sending a minimal response.
         const char* response = "*1\r\n$4\r\nPING\r\n";
         write_exactly(client_fd, response, strlen(response));
     } else {
