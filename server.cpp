@@ -92,9 +92,6 @@ int setup_server() {
         die("listen");
     }
 
-    // TODO: Add timeout in socket for recv
-    // TODO: Add timeout in socket for accept (using select or poll)
-
     std::cout << "Server listening on port: " << redis::GlobalConfig.port << std::endl;
     return server_fd;
 }
