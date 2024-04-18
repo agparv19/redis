@@ -1,3 +1,0 @@
-/home/agparv19/codemill/redis/bin/CMakeFiles/redis.dir
-/home/agparv19/codemill/redis/bin/CMakeFiles/edit_cache.dir
-/home/agparv19/codemill/redis/bin/CMakeFiles/rebuild_cache.dir
