@@ -27,7 +27,7 @@ GET: 213675.22 requests per second
 
 For comparison here is how current version of redis performs:
 ```
-agparv19:~$redis-benchmark -t set,get, -n 100000 -q
+redis-benchmark -t set,get, -n 100000 -q
 SET: 222222.23 requests per second
 GET: 222717.16 requests per second
 ```
