@@ -1,3 +1,6 @@
+myRedis
+-------
+
 This is my implementation of popular in-memory key-value database [Redis](https://github.com/redis/redis) from scratch in C++. (referred to as myRedis in rest of this doc)
 
 myRedis supports the same operations as the actual version of Redis at launch in 2009. The list of commands supported are:
@@ -56,6 +59,54 @@ $cd $REDIS_HOME
 $bin/redis
 ```
 
+This will start a myRedis server at port 2000 (You can change that in `config.json` file).
+
+You should see an output like below if you are running this for the first time:
+```
+$bin/redis
+State restoral failed! Continuing with empty state...
+Server listening on port: 2000
+```
+
+(More on state restoral below)
+
 Note that you must run this executable from your `$REDIS_HOME` directory, as myRedis assumes that a 
 `config.json` file is present in the directory the executable is being run in.
+
+Talking to myRedis
+------------------
+
+You can talk to myRedis using official [redis-cli](https://redis.io/docs/latest/develop/connect/cli/)! In a different terminal you can try the following:
+```
+$redis-cli -p 2000
+127.0.0.1:2000> ping
+PONG
+127.0.0.1:2000> echo "this is myRedis"
+this is myRedis
+127.0.0.1:2000> set name1 ram 
+OK
+127.0.0.1:2000> get name1
+ram
+127.0.0.1:2000> rpush statement myRedis looks interesting!
+(integer) 3
+127.0.0.1:2000> lrange statement 0 -1
+1) "myRedis"
+2) "looks"
+3) "interesting!"
+127.0.0.1:2000> save
+OK
+```
+
+Key choices of myRedis
+----------------------
+
+
+Source code layout
+------------------
+
+
+Improvements
+------------
+
+
 
