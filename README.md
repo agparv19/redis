@@ -35,6 +35,27 @@ GET: 222717.16 requests per second
 Building myRedis
 ----------------
 
-Let's say the path you cloned this repo is $REDIS_HOME
+Let's say the path you cloned this repo is `$REDIS_HOME`. Steps to build myRedis:
+```
+$export REDIS_HOME=/path/to/your/clone
+$cd $REDIS_HOME
+$mkdir ${REDIS_HOME}/bin
+$cd bin
+$cmake $REDIS_HOME
+$make
+```
 
+This will create the executable named `redis` in `${REDIS_HOME}\bin` directory.
+
+Running myRedis
+----------------
+
+To run myRedis, just do:
+```
+$cd $REDIS_HOME
+$bin/redis
+```
+
+Note that you must run this executable from your `$REDIS_HOME` directory, as myRedis assumes that a 
+`config.json` file is present in the directory the executable is being run in.
 
